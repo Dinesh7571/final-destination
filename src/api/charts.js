@@ -6,7 +6,7 @@ import axiosClient from './axiosClient.js';
 const chartCache = new Map();
 
 /**
- * Fetch Train Composition from IRCTC
+ * Fetch Train Composition directly from IRCTC
  */
 export async function fetchTrainComposition({ trainNo, jDate, boardingStation }) {
   const cacheKey = `composition_${trainNo}_${jDate}_${boardingStation}`;
@@ -20,26 +20,19 @@ export async function fetchTrainComposition({ trainNo, jDate, boardingStation })
     boardingStation: String(boardingStation).toUpperCase()
   };
 
-  const urls = [
-    '/online-charts/api/trainComposition',
-    'https://www.irctc.co.in/online-charts/api/trainComposition'
-  ];
+  const url = 'https://www.irctc.co.in/online-charts/api/trainComposition';
 
-  for (const url of urls) {
-    try {
-      const response = await axiosClient.post(url, payload, {
-        headers: {
-          'Origin': 'https://railchart.in',
-          'Referer': 'https://railchart.in/'
-        }
-      });
-      if (response.data && response.data.cdd && response.data.cdd.length > 0) {
-        const result = { data: response.data, isCorsBlocked: false };
-        chartCache.set(cacheKey, result);
-        return result;
-      }
-    } catch (error) {
-      // Continue to next URL
+  try {
+    const response = await axiosClient.post(url, payload);
+    if (response.data && response.data.cdd && response.data.cdd.length > 0) {
+      const result = { data: response.data, isCorsBlocked: false };
+      chartCache.set(cacheKey, result);
+      return result;
+    }
+  } catch (error) {
+    if (error.isCorsOrNetworkError) {
+      const blockedResult = { data: null, isCorsBlocked: true, error: error.message };
+      return blockedResult;
     }
   }
 
@@ -47,7 +40,7 @@ export async function fetchTrainComposition({ trainNo, jDate, boardingStation })
 }
 
 /**
- * Fetch Coach Composition (Berth Details bdd[] and occupancy bsd[]) from IRCTC
+ * Fetch Coach Composition (Berth Details bdd[] and occupancy bsd[]) directly from IRCTC
  */
 export async function fetchCoachComposition({
   trainNo,
@@ -78,35 +71,25 @@ export async function fetchCoachComposition({
     payload.trainStartDate = String(trainStartDate);
   }
 
-  const urls = [
-    '/online-charts/api/coachComposition',
-    'https://www.irctc.co.in/online-charts/api/coachComposition'
-  ];
+  const url = 'https://www.irctc.co.in/online-charts/api/coachComposition';
 
-  for (const url of urls) {
-    try {
-      const response = await axiosClient.post(url, payload, {
-        headers: {
-          'Origin': 'https://railchart.in',
-          'Referer': 'https://railchart.in/'
-        }
-      });
-      const respData = response.data;
-      if (respData) {
-        const berths = respData.bdd || respData.berthDetails;
-        if (Array.isArray(berths) && berths.length > 0) {
-          const normalized = {
-            ...respData,
-            bdd: berths
-          };
-          const result = { data: normalized, isCorsBlocked: false };
-          chartCache.set(cacheKey, result);
-          return result;
-        }
+  try {
+    const response = await axiosClient.post(url, payload);
+    const respData = response.data;
+    if (respData) {
+      const berths = respData.bdd || respData.berthDetails;
+      if (Array.isArray(berths) && berths.length > 0) {
+        const normalized = {
+          ...respData,
+          bdd: berths
+        };
+        const result = { data: normalized, isCorsBlocked: false };
+        chartCache.set(cacheKey, result);
+        return result;
       }
-    } catch (error) {
-      // Continue
     }
+  } catch (error) {
+    // Continue to empty fallback
   }
 
   // Return empty coach data if no berths found

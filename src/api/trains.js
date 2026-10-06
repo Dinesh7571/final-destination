@@ -1,28 +1,21 @@
 import axiosClient from './axiosClient.js';
 
 /**
- * Fetch live train list from railchart.in (fallback to railberth.com)
+ * Fetch live train list directly from railchart.in (fallback to railberth.com)
  */
 export async function fetchTrainList() {
   const urls = [
-    '/railchart-api/trains',               // railchart.in via local dev proxy
-    '/railberth-api/trainList',            // railberth.com via local dev proxy
-    'https://railchart.in/api/trains',     // direct railchart.in
-    'https://railberth.com/api/trainList'  // railberth.com direct
+    'https://railchart.in/api/trains',
+    'https://railberth.com/api/trainList'
   ];
 
   for (const url of urls) {
     try {
-      const response = await axiosClient.get(url, {
-        headers: {
-          'Origin': 'https://railchart.in',
-          'Referer': 'https://railchart.in/'
-        }
-      });
+      const response = await axiosClient.get(url);
       if (response.data && Array.isArray(response.data) && response.data.length > 0) {
         return response.data.map(item => ({
           trainNo: String(
-            item.no               // railchart.in live field
+            item.no               // railchart.in field
             || item.trainNumber   // railberth.com field
             || item.trainNo
             || item.number

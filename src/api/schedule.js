@@ -2,25 +2,18 @@ import axiosClient from './axiosClient.js';
 import { normalizeSchedule } from '../services/scheduleNormalizer.js';
 
 /**
- * Fetch live train schedule from railchart.in or railberth.com
+ * Fetch live train schedule directly from railchart.in or railberth.com
  */
 export async function fetchTrainSchedule(trainNo) {
   const cleanTrainNo = String(trainNo).trim();
   const urls = [
-    `/railchart-api/schedule/${cleanTrainNo}`,
-    `/railberth-api/schedule/${cleanTrainNo}`,
     `https://railchart.in/api/schedule/${cleanTrainNo}`,
     `https://railberth.com/api/schedule/${cleanTrainNo}`
   ];
 
   for (const url of urls) {
     try {
-      const response = await axiosClient.get(url, {
-        headers: {
-          'Origin': 'https://railchart.in',
-          'Referer': 'https://railchart.in/'
-        }
-      });
+      const response = await axiosClient.get(url);
       const data = response.data;
       let rawList = null;
 
